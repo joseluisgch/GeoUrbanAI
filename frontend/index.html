@@ -657,7 +657,7 @@ header{
   <!-- Configuración API (toggle) -->
   <div id="api-config">
     <div style="font-size:10px;color:var(--muted);margin-bottom:5px">URL del backend</div>
-    <input id="api-url" type="text" value="http://https://geovisor-ia-backend.onrender.com" placeholder="https://mi-api.render.com"/>
+    <input id="api-url" type="text" value="https://geovisor-ia-backend.onrender.com" placeholder="https://mi-api.render.com"/>
     <button id="ping-btn" onclick="pingApi()">Conectar al backend</button>
   </div>
 
@@ -1014,7 +1014,7 @@ header{
 <script>
 // ══ ESTADO ═══════════════════════════════════════════════════════════════
 const S={
-  apiUrl:'http://localhost:8000', apiOk:false, loading:false,
+  apiUrl:'https://geovisor-ia-backend.onrender.com', apiOk:false, loading:false,
   layers:[], counter:0, searchTimer:null, searchIdx:-1,
 };
 const HEX_PAL=['#2b115c','#8c2582','#c13d80','#fca35d','#fcfdbf'];
