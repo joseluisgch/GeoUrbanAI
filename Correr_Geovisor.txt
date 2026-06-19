@@ -1,0 +1,16 @@
+
+# Correr el backend
+
+uvicorn main:app --reload --port 8000 --env-file .env
+
+
+
+# Verificar si la API responde:
+
+http://localhost:8000/health
+http://localhost:8000/docs
+
+# Correr el Fronted - En otra terminal (sin cerrar la del backend)
+
+cd C:\Actividades_JL\geovisor-ia\frontend
+python -m http.server 3000

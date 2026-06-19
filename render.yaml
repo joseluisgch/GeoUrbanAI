@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: geovisor-ia-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false   # Se configura manualmente en el dashboard de Render
+    healthCheckPath: /health
+    autoDeploy: true

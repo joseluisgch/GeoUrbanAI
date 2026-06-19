@@ -1,0 +1,31 @@
+# Entornos virtuales
+venv/
+.venv/
+env/
+
+# Archivos de credenciales y API keys (¡Seguridad Crítica!)
+.env
+*.env
+API Key Groq.txt
+API Key*.txt
+
+# Caché y archivos compilados de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+cache/
+
+# Archivos temporales, de respaldo o empaquetados
+Geovisor_120626_v2/
+Geovisor_120626_v2.zip
+*.zip
+*.rar
+*.tar.gz
+
+# Archivos del sistema y de editores
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
