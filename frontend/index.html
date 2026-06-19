@@ -395,10 +395,14 @@ header{
 /* ══ SELECTOR MAPAS BASE (miniaturas) ════════════════════════════════════ */
 #basemap-strip{
   position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
-  display:flex;gap:8px;z-index:900;
+  display:none;gap:8px;z-index:1005;
   background:rgba(17,23,32,.88);border:1px solid var(--border2);
   border-radius:14px;padding:8px 12px;backdrop-filter:blur(8px);
   box-shadow:0 4px 20px rgba(0,0,0,.4);
+}
+#basemap-strip.show{
+  display:flex;
+  animation:fadein .18s ease;
 }
 .bm-card{
   display:flex;flex-direction:column;align-items:center;gap:4px;
@@ -484,6 +488,55 @@ header{
 #menu-btn{display:none;background:none;border:none;color:var(--text);cursor:pointer;padding:5px;border-radius:6px}
 #menu-btn:hover{background:var(--panel2)}
 
+/* ══ BOTÓN FLOTANTE AGENTE IA ═════════════════════════════════════════════ */
+#floating-agent-btn {
+  display: none;
+  position: absolute;
+  bottom: 85px;
+  left: 12px;
+  z-index: 1000;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--blue) 0%, #1e40af 100%);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 30px;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.45);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+#floating-agent-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+#floating-agent-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+.agent-pulse-ring {
+  position: absolute;
+  inset: -1px;
+  border-radius: 30px;
+  border: 2px solid var(--blue);
+  animation: agent-pulse 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+@keyframes agent-pulse {
+  0% { transform: scale(1); opacity: 1; border-color: rgba(41, 121, 255, 0.8); }
+  70% { transform: scale(1.15, 1.25); opacity: 0; border-color: rgba(41, 121, 255, 0); }
+  100% { transform: scale(1); opacity: 0; border-color: rgba(41, 121, 255, 0); }
+}
+/* Ocultar botón flotante cuando el panel izquierdo está abierto */
+#left-panel.open ~ #map-wrap #floating-agent-btn {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.8);
+}
+
 /* ══ RESPONSIVE ══════════════════════════════════════════════════════════ */
 #legend{bottom:64px;right:10px}
 @media(max-width:760px){
@@ -500,6 +553,7 @@ header{
   #map-toolbar{top:auto;bottom:100px;left:50%;transform:translateX(-50%)}
   #basemap-strip{bottom:44px}
   #rp-tab{display:none}
+  #floating-agent-btn{display:flex}
 }
 /* ── Badges de tipo de análisis ── */
 .tool-badge{
@@ -773,6 +827,14 @@ header{
         <path d="M8 18v3M16 18v3"/>
       </svg>
     </div>
+    <div class="side-btn" id="bm-toggle-btn" onclick="toggleBasemapStrip()" title="Mapas Base"
+      style="border-top:1px solid var(--border2);margin-top:4px;padding-top:4px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+        <polyline points="2 17 12 22 22 17"/>
+        <polyline points="2 12 12 17 22 12"/>
+      </svg>
+    </div>
   </div>
 
   <!-- Toolbar central flotante -->
@@ -802,6 +864,15 @@ header{
       <span class="bm-label">Calles</span>
     </div>
   </div>
+
+  <!-- Botón flotante del Agente IA (Móvil) -->
+  <button id="floating-agent-btn" onclick="togglePanel()" title="Abrir Agente IA">
+    <span class="agent-pulse-ring"></span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    <span>Agente IA</span>
+  </button>
 
   <!-- Leyenda -->
   <div id="legend"></div>
@@ -1230,6 +1301,20 @@ function setBasemap(name,el){
   // Actualizar botones
   document.querySelectorAll('.bm-card').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
+
+  // Cerrar el strip de mapas base tras seleccionar uno
+  const strip = document.getElementById('basemap-strip');
+  if(strip.classList.contains('show')){
+    strip.classList.remove('show');
+    document.getElementById('bm-toggle-btn').classList.remove('sv-active');
+  }
+}
+
+function toggleBasemapStrip(){
+  const strip = document.getElementById('basemap-strip');
+  const btn = document.getElementById('bm-toggle-btn');
+  const show = strip.classList.toggle('show');
+  btn.classList.toggle('sv-active', show);
 }
 
 function printMap(){
