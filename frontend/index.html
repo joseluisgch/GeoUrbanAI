@@ -1431,12 +1431,16 @@ async function pingApi(){
   setStatus('busy','Conectando…');
   const url=getApiUrl();
   try{
-    const r=await fetch(url+'/health',{signal:AbortSignal.timeout(6000)});
+    const r=await fetch(url+'/health',{signal:AbortSignal.timeout(30000)});
     if(!r.ok)throw new Error('HTTP '+r.status);
     S.apiOk=true; S.apiUrl=url; setStatus('ok');
     try{ localStorage.setItem('geovisor_api_url', url); }catch(_){}
     showToast('✅ Backend conectado','ok');
-  }catch(e){S.apiOk=false;setStatus('err');showToast('❌ '+e.message,'err');}
+  }catch(e){
+    S.apiOk=false;setStatus('err');
+    const tip = url.includes('onrender.com') ? ' (En Render gratuito el servidor puede tardar ~40s en despertar)' : '';
+    showToast('❌ '+e.message+tip,'err',6000);
+  }
 }
 
 function toggleApiConfig(){
@@ -1562,8 +1566,11 @@ async function sendQuery(){
     handleResp(data);
   }catch(e){
     typing.remove();
-    const msg=e.name==='TimeoutError'?'Timeout — acerca el mapa e intenta de nuevo.':e.message;
-    addMsg('ai','⚠️ '+msg);showToast(msg,'err');
+    let msg = e.name==='TimeoutError' ? 'Tiempo de espera agotado — acerca el mapa e intenta de nuevo.' : e.message;
+    if(msg === 'Failed to fetch'){
+      msg = 'No se pudo conectar al backend (' + S.apiUrl + '). Si estás en Render gratuito, puede estar despertando (~40s). Intenta nuevamente.';
+    }
+    addMsg('ai','⚠️ '+msg);showToast(msg,'err',6000);
   }finally{
     S.loading=false;document.getElementById('send-btn').disabled=false;
     setStatus(S.apiOk?'ok':'');

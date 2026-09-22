@@ -44,7 +44,7 @@ app.add_middleware(
 )
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 
 # ── Sistema de prompts del agente ──────────────────────────────────────────────
 SYSTEM_PROMPT = """Eres un agente geográfico especializado en análisis de accesibilidad urbana para ciudades peruanas y latinoamericanas.
@@ -600,9 +600,6 @@ async def analyze(req: QueryRequest):
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY no está configurada en el archivo .env del backend.")
 
     try:
-        model = os.environ.get("GEMINI_MODEL", GEMINI_MODEL or "gemini-3.6-flash")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
-        
         user_content = (
             f"Solicitud: '{req.text}'\n"
             f"Área visible: {area_km2:.1f} km²\n"
@@ -626,18 +623,33 @@ async def analyze(req: QueryRequest):
             }
         }
         
-        # Intentar con retry en caso de 503 (alta demanda momentánea)
-        max_attempts = 2
+        models_to_try = [
+            os.environ.get("GEMINI_MODEL", GEMINI_MODEL or "gemini-flash-lite-latest"),
+            "gemini-flash-lite-latest",
+            "gemini-3.1-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-3.6-flash"
+        ]
+        # Preservar orden único
+        models_to_try = list(dict.fromkeys(models_to_try))
+        
         res_json = None
-        for attempt in range(max_attempts):
-            res = requests.post(url, json=payload, timeout=50)
-            if res.status_code == 503 and attempt < max_attempts - 1:
-                import time
-                time.sleep(2)
+        last_error = None
+        for model in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+            try:
+                res = requests.post(url, json=payload, timeout=30)
+                if res.status_code in (429, 503):
+                    continue
+                res.raise_for_status()
+                res_json = res.json()
+                break
+            except Exception as e:
+                last_error = e
                 continue
-            res.raise_for_status()
-            res_json = res.json()
-            break
+                
+        if not res_json:
+            raise HTTPException(status_code=500, detail=f"Error Gemini (cuota excedida o alta demanda en todos los modelos): {last_error}")
             
         try:
             ai_parts = res_json['candidates'][0]['content']['parts']
