@@ -1,22 +1,23 @@
-REcomendacion es generar un entorno virtual y usar un editor:
+# ========================================================
+# GUÍA PARA CONFIGURAR Y LEVANTAR EL SERVIDOR LOCAL
+# ========================================================
 
-:: 1. Entrar a la carpeta del backend
-cd ruta\a\geovisor-ia\backend
+1. Configuración de API Key:
+   Asegúrate de que en 'backend/.env' esté tu clave de Google Gemini:
+   GEMINI_API_KEY=tu_api_key_de_google
+   GEMINI_MODEL=gemini-3.6-flash
 
-:: 2. Crear el entorno virtual
-python -m venv .venv
+2. Instalar dependencias (ya instaladas en el sistema):
+   pip install -r backend/requirements.txt
 
-:: 3. Activarlo (CMD)
-.venv\Scripts\activate
+3. Iniciar el Backend (Terminal 1):
+   cd E:\geovisor-ia\backend
+   python -m uvicorn main:app --reload --port 8000
 
-:: Si usas PowerShell en VSCode:
-:: .venv\Scripts\Activate.ps1
+4. Iniciar el Frontend (Terminal 2):
+   cd E:\geovisor-ia\frontend
+   python -m http.server 3000
 
-:: 4. Instalar dependencias
-pip install -r requirements.txt
-
-:: 5. Setear la API key de Groq (solo dura mientras el CMD esté abierto)
-set GROQ_API_KEY=tu_api_key_aqui
-
-:: 6. Levantar el servidor
-uvicorn main:app --reload --port 8000
+5. Acceso:
+   Abre http://localhost:3000 en tu navegador web.
+   El indicador en la esquina superior dirá "API conectada" en verde.

@@ -18,6 +18,7 @@ __pycache__/
 cache/
 
 # Archivos temporales, de respaldo o empaquetados
+*copy*.py
 Geovisor_120626_v2/
 Geovisor_120626_v2.zip
 *.zip

@@ -1,7 +1,7 @@
 """
 Geovisor IA Geográfico — Backend FastAPI
 Autor: GEOPLANTER / Jose Luis Galindo Chillcce
-Stack: FastAPI · osmnx · geopandas · rasterio · Groq API (llama-3.3-70b-versatile)
+Stack: FastAPI · osmnx · geopandas · rasterio · Google Gemini API (gemini-3.6-flash)
 Sin dependencias compiladas: grilla hexagonal implementada con numpy + shapely.
 """
 
@@ -12,7 +12,6 @@ import re
 from io import BytesIO
 
 import requests
-from groq import Groq
 import geopandas as gpd
 import numpy as np
 import osmnx as ox
@@ -25,11 +24,15 @@ from rasterio.transform import from_bounds
 from scipy.stats import gaussian_kde
 from shapely.geometry import Point, Polygon
 from shapely.ops import unary_union
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 # ── Configuración ──────────────────────────────────────────────────────────────
 app = FastAPI(
     title="Geovisor IA Geográfico",
-    description="Análisis de accesibilidad urbana con OSM y Groq AI (llama-3.3-70b-versatile)",
+    description="Análisis de accesibilidad urbana con OSM y Google Gemini AI (gemini-3.6-flash)",
     version="1.0.0",
 )
 
@@ -40,7 +43,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
 # ── Sistema de prompts del agente ──────────────────────────────────────────────
 SYSTEM_PROMPT = """Eres un agente geográfico especializado en análisis de accesibilidad urbana para ciudades peruanas y latinoamericanas.
@@ -581,7 +585,7 @@ def health():
 async def analyze(req: QueryRequest):
     """
     Endpoint principal: texto en lenguaje natural → GeoJSON enriquecido.
-    Agente: Groq llama-3.3-70b-versatile.
+    Agente: Google Gemini gemini-3.6-flash.
     Hexágonos: grilla propia con numpy + shapely (sin h3).
     """
     area_km2 = bbox_area_km2(req.bbox)
@@ -591,27 +595,59 @@ async def analyze(req: QueryRequest):
             detail=f"Área demasiado grande ({area_km2:.0f} km²). Acerca el mapa.",
         )
 
-    # 1. Agente Groq
+    # 1. Agente Gemini
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY no está configurada en el archivo .env del backend.")
+
     try:
-        ai_response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=800,
-            temperature=0,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+        model = os.environ.get("GEMINI_MODEL", GEMINI_MODEL or "gemini-3.6-flash")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+        
+        user_content = (
+            f"Solicitud: '{req.text}'\n"
+            f"Área visible: {area_km2:.1f} km²\n"
+            f"Centro: lat={req.center.get('lat',0):.4f}, "
+            f"lon={req.center.get('lon',0):.4f}"
+        )
+        
+        payload = {
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_PROMPT}]
+            },
+            "contents": [
                 {
                     "role": "user",
-                    "content": (
-                        f"Solicitud: '{req.text}'\n"
-                        f"Área visible: {area_km2:.1f} km²\n"
-                        f"Centro: lat={req.center.get('lat',0):.4f}, "
-                        f"lon={req.center.get('lon',0):.4f}"
-                    ),
-                },
+                    "parts": [{"text": user_content}]
+                }
             ],
-        )
-        intent = json.loads(ai_response.choices[0].message.content.strip())
+            "generationConfig": {
+                "temperature": 0.0,
+                "responseMimeType": "application/json"
+            }
+        }
+        
+        # Intentar con retry en caso de 503 (alta demanda momentánea)
+        max_attempts = 2
+        res_json = None
+        for attempt in range(max_attempts):
+            res = requests.post(url, json=payload, timeout=50)
+            if res.status_code == 503 and attempt < max_attempts - 1:
+                import time
+                time.sleep(2)
+                continue
+            res.raise_for_status()
+            res_json = res.json()
+            break
+            
+        try:
+            ai_parts = res_json['candidates'][0]['content']['parts']
+            ai_text = next((p['text'] for p in ai_parts if isinstance(p, dict) and 'text' in p), None)
+            if not ai_text:
+                raise ValueError("No text part found in response")
+        except (KeyError, IndexError, ValueError, TypeError):
+            raise HTTPException(status_code=500, detail="Respuesta vacía o formato incorrecto de Gemini API")
+            
+        intent = json.loads(ai_text.strip())
 
         # ── Override: prioridad 1 = frontend, prioridad 2 = palabras clave ──
         if req.forced_type:
@@ -631,14 +667,20 @@ async def analyze(req: QueryRequest):
             if any(kw in text_lower for kw in zoning_kw):
                 intent["include_zoning"] = True
     except json.JSONDecodeError as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"JSON inválido del agente: {e}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error Groq: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error Gemini: {e}")
 
     # 2. Descargar POIs
     try:
         gdf = fetch_osm_pois(req.bbox, intent["osm_tags"])
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=502, detail=f"Error OSM: {e}")
 
     total_pois = len(gdf)

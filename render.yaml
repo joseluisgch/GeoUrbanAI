@@ -6,7 +6,7 @@ services:
     dockerContext: ./backend
     plan: free
     envVars:
-      - key: GROQ_API_KEY
+      - key: GEMINI_API_KEY
         sync: false   # Se configura manualmente en el dashboard de Render
     healthCheckPath: /health
     autoDeploy: true

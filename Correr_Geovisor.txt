@@ -1,16 +1,26 @@
+# ========================================================
+# PASOS PARA EJECUTAR GEOVISOR IA EN LOCAL
+# ========================================================
 
-# Correr el backend
+# --------------------------------------------------------
+# TERMINAL 1: Levantar el Backend (FastAPI con Gemini)
+# --------------------------------------------------------
+cd E:\geovisor-ia\backend
+python -m uvicorn main:app --reload --port 8000
 
-uvicorn main:app --reload --port 8000 --env-file .env
+# Verificar si la API responde en el navegador:
+# http://localhost:8000/health
+# http://localhost:8000/docs
 
 
-
-# Verificar si la API responde:
-
-http://localhost:8000/health
-http://localhost:8000/docs
-
-# Correr el Fronted - En otra terminal (sin cerrar la del backend)
-
-cd C:\Actividades_JL\geovisor-ia\frontend
+# --------------------------------------------------------
+# TERMINAL 2: Levantar el Frontend (Servidor Web)
+# --------------------------------------------------------
+cd E:\geovisor-ia\frontend
 python -m http.server 3000
+
+# Abrir en el navegador:
+# http://localhost:3000
+
+# Nota: El frontend detectará automáticamente que estás en local
+# y se conectará a http://localhost:8000 (indicador verde "API conectada").

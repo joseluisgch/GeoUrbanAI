@@ -1084,10 +1084,19 @@ header{
 
 <script>
 // ══ ESTADO ═══════════════════════════════════════════════════════════════
+const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+const defaultApiUrl = isLocalHost ? 'http://localhost:8000' : 'https://geovisor-ia-backend.onrender.com';
+const storedApiUrl = localStorage.getItem('geovisor_api_url') || defaultApiUrl;
+
 const S={
-  apiUrl:'https://geovisor-ia-backend.onrender.com', apiOk:false, loading:false,
+  apiUrl: storedApiUrl, apiOk:false, loading:false,
   layers:[], counter:0, searchTimer:null, searchIdx:-1,
 };
+
+// Sincronizar input de configuración
+const apiUrlInput = document.getElementById('api-url');
+if(apiUrlInput) apiUrlInput.value = storedApiUrl;
+
 const HEX_PAL=['#2b115c','#8c2582','#c13d80','#fca35d','#fcfdbf'];
 const DOT_COL=['#00c97a','#2979ff','#ffab00','#ff4444','#7c4dff','#00bcd4'];
 
@@ -1425,6 +1434,7 @@ async function pingApi(){
     const r=await fetch(url+'/health',{signal:AbortSignal.timeout(6000)});
     if(!r.ok)throw new Error('HTTP '+r.status);
     S.apiOk=true; S.apiUrl=url; setStatus('ok');
+    try{ localStorage.setItem('geovisor_api_url', url); }catch(_){}
     showToast('✅ Backend conectado','ok');
   }catch(e){S.apiOk=false;setStatus('err');showToast('❌ '+e.message,'err');}
 }
